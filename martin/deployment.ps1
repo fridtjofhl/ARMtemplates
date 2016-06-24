@@ -1,10 +1,9 @@
-﻿﻿$resourceGroup = 'R07'
-$deployment = 'R07D'
-
+﻿$resourceGroup = 'Milestone2'
+$deployment = 'D1'
 $subscriptionName = 'Free Trial'
 $location = 'North Europe'
-$templateFile = 'milestone1-template.json'
-$parameterFile = 'milestone1-parameters.json'
+$templateFile = 'template.json'
+$parameterFile = 'parameters.json'
 
 Add-AzureRmAccount
 Set-AzureRmContext -SubscriptionName $subscriptionName
