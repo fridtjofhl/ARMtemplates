@@ -13,42 +13,49 @@
       "metadata": {
         "description": "Password for the Virtual Machine."
       }
+    },
+    "hiddenVMCount": {
+      "type": "int",
+      "defaultValue": 2
     }
   },
   "variables": {
+    "availabilitySetName": "availabilitySet1",
     "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'storage')]",
     "storageAccountType": "Standard_LRS",
     "imagePublisher": "Canonical",
     "imageOffer": "UbuntuServer",
     "imageSku": "14.04.4-LTS",
     "OSDiskName": "osdisk",
-    "OSDiskName2": "osdisk2",
-    "OSDiskName3": "osdisk3",
     "nicName": "networkinterface",
-    "nicName2": "networkinterface2",
-    "nicName3": "networkinterface3",
     "addressPrefix": "10.0.0.0/16",
     "publicIPAddressName": "publicIP",
     "publicIPAddressType": "Dynamic",
     "subnetName": "Subnet",
     "subnetPrefix": "10.0.0.0/24",
-    "vmName": "vm",
-    "vmName2": "vm2",
-    "vmName3": "vm3",
+    "publicVMName": "publicVM",
+    "privateVMName": "privateVM",
     "vmSize": "Standard_A0",
     "vmStorageAccountContainerName": "vhds",
     "virtualNetworkName": "MyVNET",
 
+    "availabilitySetID": "[resourceId('Microsoft.Compute/availabilitySets', variables('availabilitySetName'))]",
     "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName'))]",
     "publicIPAddressID": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]",
     "storageAccountID": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
     "nicID": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]",
-    "nicID2": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName2'))]",
-    "nicID3": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName3'))]",
     "subnetRef": "[concat(variables('vnetID'),'/subnets/',variables('subnetName'))]",
     "apiVersion": "2015-06-15"
   },
   "resources": [
+    {
+      "type": "Microsoft.Compute/availabilitySets",
+      "name": "[variables('availabilitySetName')]",
+      "apiVersion": "2015-05-01-preview",
+      "location": "[resourceGroup().location]",
+      "properties": {
+      }
+    },
     {
       "type": "Microsoft.Storage/storageAccounts",
       "name": "[variables('storageAccountName')]",
@@ -117,7 +124,7 @@
     {
       "apiVersion": "[variables('apiVersion')]",
       "type": "Microsoft.Compute/virtualMachines",
-      "name": "[variables('vmName')]",
+      "name": "[variables('publicVMName')]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
         "[variables('storageAccountID')]",
@@ -128,7 +135,7 @@
           "vmSize": "[variables('vmSize')]"
         },
         "osProfile": {
-          "computerName": "[variables('vmName')]",
+          "computerName": "[variables('publicVMName')]",
           "adminUsername": "[parameters('adminUsername')]",
           "adminPassword": "[parameters('adminPassword')]"
         },
@@ -154,17 +161,24 @@
               "id": "[variables('nicID')]"
             }
           ]
+        },
+        "availabilitySet": {
+          "id": "[variables('availabilitySetID')]"
         }
       }
     },
     {
       "apiVersion": "[variables('apiVersion')]",
       "type": "Microsoft.Network/networkInterfaces",
-      "name": "[variables('nicName2')]",
+      "name": "[concat(variables('nicName'), copyIndex())]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
         "[variables('vnetID')]"
       ],
+      "copy": {
+        "name": "nicCopy",
+        "count": "[parameters('hiddenVMCount')]"
+      },
       "properties": {
         "ipConfigurations": [
           {
@@ -182,18 +196,22 @@
     {
       "apiVersion": "[variables('apiVersion')]",
       "type": "Microsoft.Compute/virtualMachines",
-      "name": "[variables('vmName2')]",
+      "name": "[concat(variables('privateVMName'), copyIndex())]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
         "[variables('storageAccountID')]",
-        "[variables('nicID2')]"
+        "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('nicName'), copyIndex()))]"
       ],
+      "copy": {
+        "name": "privateVMCopy",
+        "count": "[parameters('hiddenVMCount')]"
+      },
       "properties": {
         "hardwareProfile": {
           "vmSize": "[variables('vmSize')]"
         },
         "osProfile": {
-          "computerName": "[variables('vmName2')]",
+          "computerName": "[concat(variables('privateVMName'), copyIndex())]",
           "adminUsername": "[parameters('adminUsername')]",
           "adminPassword": "[parameters('adminPassword')]"
         },
@@ -205,9 +223,9 @@
             "version": "latest"
           },
           "osDisk": {
-            "name": "[variables('OSDiskName2')]",
+            "name": "[concat(variables('OSDiskName'), copyIndex())]",
             "vhd": {
-              "uri": "[concat('http://',variables('storageAccountName'),'.blob.core.windows.net/',variables('vmStorageAccountContainerName'),'/',variables('OSDiskName2'),'.vhd')]"
+              "uri": "[concat('http://',variables('storageAccountName'),'.blob.core.windows.net/',variables('vmStorageAccountContainerName'),'/',variables('OSDiskName'), copyIndex(), '.vhd')]"
             },
             "caching": "ReadWrite",
             "createOption": "FromImage"
@@ -216,74 +234,12 @@
         "networkProfile": {
           "networkInterfaces": [
             {
-              "id": "[variables('nicID2')]"
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('nicName'), copyIndex()))]"
             }
           ]
-        }
-      }
-    },
-    {
-      "apiVersion": "[variables('apiVersion')]",
-      "type": "Microsoft.Network/networkInterfaces",
-      "name": "[variables('nicName3')]",
-      "location": "[resourceGroup().location]",
-      "dependsOn": [
-        "[variables('vnetID')]"
-      ],
-      "properties": {
-        "ipConfigurations": [
-          {
-            "name": "ipconfig3",
-            "properties": {
-              "privateIPAllocationMethod": "Dynamic",
-              "subnet": {
-                "id": "[variables('subnetRef')]"
-              }
-            }
-          }
-        ]
-      }
-    },
-    {
-      "apiVersion": "[variables('apiVersion')]",
-      "type": "Microsoft.Compute/virtualMachines",
-      "name": "[variables('vmName3')]",
-      "location": "[resourceGroup().location]",
-      "dependsOn": [
-        "[variables('storageAccountID')]",
-        "[variables('nicID3')]"
-      ],
-      "properties": {
-        "hardwareProfile": {
-          "vmSize": "[variables('vmSize')]"
         },
-        "osProfile": {
-          "computerName": "[variables('vmName3')]",
-          "adminUsername": "[parameters('adminUsername')]",
-          "adminPassword": "[parameters('adminPassword')]"
-        },
-        "storageProfile": {
-          "imageReference": {
-            "publisher": "[variables('imagePublisher')]",
-            "offer": "[variables('imageOffer')]",
-            "sku": "[variables('imageSku')]",
-            "version": "latest"
-          },
-          "osDisk": {
-            "name": "[variables('OSDiskName3')]",
-            "vhd": {
-              "uri": "[concat('http://',variables('storageAccountName'),'.blob.core.windows.net/',variables('vmStorageAccountContainerName'),'/',variables('OSDiskName3'),'.vhd')]"
-            },
-            "caching": "ReadWrite",
-            "createOption": "FromImage"
-          }
-        },
-        "networkProfile": {
-          "networkInterfaces": [
-            {
-              "id": "[variables('nicID3')]"
-            }
-          ]
+        "availabilitySet": {
+          "id": "[variables('availabilitySetID')]"
         }
       }
     }
