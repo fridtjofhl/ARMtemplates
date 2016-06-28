@@ -61,23 +61,23 @@
         "Description": "The storage size of the VM"
       }
     },
-    "scriptURI": {
-      "type": "string",
-      "defaultValue": "",
-      "metadata": {
-        "Description": "The URI of the script that will be run after deploying the VM"
-      }
-    },
-    "commandToExecute": {
-      "type": "string",
-      "metadata": {
-        "Description": "The command to execute after deploying the VM"
-      }
-    },
-    "privateVMCount": {
+    "VMCount": {
       "type": "int",
+      "defaultValue": 3,
       "metadata": {
         "Description": "The number of private VMs"
+      }
+    },
+    "scriptURI": {
+      "type": "string",
+      "metadata": {
+        "Description": "The URI for the script that will be executed"
+      }
+    },
+    "command": {
+      "type": "string",
+      "metadata": {
+        "Description": "The command that will be executed"
       }
     }
   },
@@ -89,20 +89,46 @@
     "publicIPAddressName": "publicIP",
     "publicIPAddressType": "Dynamic",
     "subnetName": "Subnet",
-    "publicVMName": "publicVM",
-    "privateVMName": "privateVM",
+    "VMName": "VM",
     "vmStorageAccountContainerName": "vhds",
     "virtualNetworkName": "MyVNET",
+    "loadBalancerName": "loadBalancer",
 
     "availabilitySetID": "[resourceId('Microsoft.Compute/availabilitySets', variables('availabilitySetName'))]",
     "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName'))]",
     "publicIPAddressID": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]",
     "storageAccountID": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
-    "nicID": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]",
+    "loadBalancerID": "[resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName'))]",
     "subnetRef": "[concat(variables('vnetID'),'/subnets/',variables('subnetName'))]",
+
     "apiVersion": "2015-06-15"
   },
   "resources": [
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "name": "[concat(variables('VMName'), copyIndex(), '/runwebserver')]",
+      "apiVersion": "[variables('apiVersion')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', variables('VMName'), copyIndex())]"
+      ],
+      "copy": {
+        "name": "scriptCopy",
+        "count": "[parameters('VMCount')]"
+      },
+      "properties": {
+        "publisher": "Microsoft.OSTCExtensions",
+        "type": "CustomScriptForLinux",
+        "typeHandlerVersion": "1.5",
+        "autoUpgradeMinorVersion": true,
+        "settings": {
+          "fileUris": [
+            "[parameters('scriptURI')]"
+          ],
+          "commandToExecute": "[parameters('command')]"
+        }
+      }
+    }, 
     {
       "type": "Microsoft.Compute/availabilitySets",
       "name": "[variables('availabilitySetName')]",
@@ -152,75 +178,99 @@
       }
     },
     {
-      "apiVersion": "[variables('apiVersion')]",
-      "type": "Microsoft.Network/networkInterfaces",
-      "name": "[variables('nicName')]",
+      "type": "Microsoft.Network/loadBalancers",
+      "name": "[variables('loadBalancerName')]",
       "location": "[resourceGroup().location]",
+      "apiVersion": "[variables('apiVersion')]",
       "dependsOn": [
-        "[variables('publicIPAddressID')]",
-        "[variables('vnetID')]"
+        "[variables('publicIPAddressID')]"
       ],
       "properties": {
-        "ipConfigurations": [
+        "frontendIPConfigurations": [
           {
-            "name": "ipconfig1",
+            "name": "frontend",
             "properties": {
-              "privateIPAllocationMethod": "Dynamic",
               "publicIPAddress": {
                 "id": "[variables('publicIPAddressID')]"
-              },
-              "subnet": {
-                "id": "[variables('subnetRef')]"
               }
             }
           }
-        ]
-      }
-    },
-    {
-      "apiVersion": "[variables('apiVersion')]",
-      "type": "Microsoft.Compute/virtualMachines",
-      "name": "[variables('publicVMName')]",
-      "location": "[resourceGroup().location]",
-      "dependsOn": [
-        "[variables('storageAccountID')]",
-        "[variables('nicID')]"
-      ],
-      "properties": {
-        "hardwareProfile": {
-          "vmSize": "[parameters('vmSize')]"
-        },
-        "osProfile": {
-          "computerName": "[variables('publicVMName')]",
-          "adminUsername": "[parameters('adminUsername')]",
-          "adminPassword": "[parameters('adminPassword')]"
-        },
-        "storageProfile": {
-          "imageReference": {
-            "publisher": "[parameters('imagePublisher')]",
-            "offer": "[parameters('imageOffer')]",
-            "sku": "[parameters('imageSku')]",
-            "version": "latest"
-          },
-          "osDisk": {
-            "name": "[variables('OSDiskName')]",
-            "vhd": {
-              "uri": "[concat('http://',variables('storageAccountName'),'.blob.core.windows.net/',variables('vmStorageAccountContainerName'),'/',variables('OSDiskName'),'.vhd')]"
-            },
-            "caching": "ReadWrite",
-            "createOption": "FromImage"
+        ],
+        "backendAddressPools": [
+          {
+            "name": "backendPool"
           }
-        },
-        "networkProfile": {
-          "networkInterfaces": [
-            {
-              "id": "[variables('nicID')]"
+        ],
+        "inboundNatRules": [
+          {
+            "name": "VM0",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('loadBalancerID'), '/frontendIPConfigurations/frontend')]"
+              },
+              "protocol": "tcp",
+              "frontendPort": 50001,
+              "backendPort": 22,
+              "enableFloatingIP": false
             }
-          ]
-        },
-        "availabilitySet": {
-          "id": "[variables('availabilitySetID')]"
-        }
+          },
+          {
+            "name": "VM1",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('loadBalancerID'), '/frontendIPConfigurations/frontend')]"
+              },
+              "protocol": "tcp",
+              "frontendPort": 50002,
+              "backendPort": 22,
+              "enableFloatingIP": false
+            }
+          },
+          {
+            "name": "VM2",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('loadBalancerID'), '/frontendIPConfigurations/frontend')]"
+              },
+              "protocol": "tcp",
+              "frontendPort": 50003,
+              "backendPort": 22,
+              "enableFloatingIP": false
+            }
+          }
+        ],
+        "loadBalancingRules": [
+          {
+            "name": "lbRules",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('loadBalancerID'), '/frontendIPConfigurations/frontend')]"
+              },
+              "backendAddressPool": {
+                "id": "[concat(variables('loadBalancerID'), '/backendAddressPools/backendPool')]"
+              },
+              "protocol": "Tcp",
+              "frontendPort": 80,
+              "backendPort": 8888,
+              "enableFloatingIP": false,
+              "idleTimeoutInMinutes": 5,
+              "probe": {
+                "id": "[concat(variables('loadBalancerID'), '/probes/tcpProbe')]"
+              }
+            }
+          }
+        ],
+        "probes": [
+          {
+            "name": "tcpProbe",
+            "properties": {
+              "protocol": "Tcp",
+              "port": 8888,
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2
+            }
+          }
+        ]
       }
     },
     {
@@ -229,11 +279,12 @@
       "name": "[concat(variables('nicName'), copyIndex())]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
-        "[variables('vnetID')]"
+        "[variables('vnetID')]",
+        "[variables('loadBalancerID')]"
       ],
       "copy": {
         "name": "nicCopy",
-        "count": "[parameters('privateVMCount')]"
+        "count": "[parameters('VMCount')]"
       },
       "properties": {
         "ipConfigurations": [
@@ -243,7 +294,17 @@
               "privateIPAllocationMethod": "Dynamic",
               "subnet": {
                 "id": "[variables('subnetRef')]"
-              }
+              },
+              "loadBalancerBackendAddressPools": [
+                {
+                 "id": "[concat(variables('loadBalancerID'), '/backendAddressPools/backendPool')]"
+                }
+              ],
+              "loadBalancerInboundNatRules": [
+                {
+                  "id": "[concat(variables('loadBalancerID'), '/inboundNatRules/VM', copyIndex())]"
+                }
+              ]
             }
           }
         ]
@@ -252,22 +313,23 @@
     {
       "apiVersion": "[variables('apiVersion')]",
       "type": "Microsoft.Compute/virtualMachines",
-      "name": "[concat(variables('privateVMName'), copyIndex())]",
+      "name": "[concat(variables('VMName'), copyIndex())]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
         "[variables('storageAccountID')]",
-        "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('nicName'), copyIndex()))]"
+        "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('nicName'), copyIndex()))]",
+        "[variables('availabilitySetID')]"
       ],
       "copy": {
         "name": "privateVMCopy",
-        "count": "[parameters('privateVMCount')]"
+        "count": "[parameters('VMCount')]"
       },
       "properties": {
         "hardwareProfile": {
           "vmSize": "[parameters('vmSize')]"
         },
         "osProfile": {
-          "computerName": "[concat(variables('privateVMName'), copyIndex())]",
+          "computerName": "[concat(variables('VMName'), copyIndex())]",
           "adminUsername": "[parameters('adminUsername')]",
           "adminPassword": "[parameters('adminPassword')]"
         },

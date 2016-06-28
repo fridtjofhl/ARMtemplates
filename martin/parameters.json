@@ -17,14 +17,14 @@
     "imageSku": {
       "value": "14.04.4-LTS"
     },
+    "VMCount": {
+      "value": 3
+    },
     "scriptURI": {
       "value": "https://raw.githubusercontent.com/fridtjofhl/ARMtemplates/master/martin/webserver.py"
     },
-    "commandToExecute": {
+    "command": {
       "value": "python webserver.py &"
-    },
-    "privateVMCount": {
-      "value": 2
     }
   }
 }
