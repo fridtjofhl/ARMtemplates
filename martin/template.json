@@ -14,28 +14,83 @@
         "description": "Password for the Virtual Machine."
       }
     },
-    "hiddenVMCount": {
+    "imagePublisher": {
+      "type": "string",
+      "metadata": {
+        "Description": "The publisher of the OS image"
+      }
+    },
+    "imageOffer": {
+      "type": "string",
+      "metadata": {
+        "Description": "The offer of the OS image"
+      }
+    },
+    "imageSku": {
+      "type": "string",
+      "metadata": {
+        "Description": "The SKU of the OS image"
+      }
+    },
+    "storageAccountType":
+    {
+      "type": "string",
+      "defaultValue": "Standard_LRS",
+      "metadata": {
+        "Description": "The storage account type"
+      }
+    },
+    "addressPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.0.0/16",
+      "metadata": {
+        "Description": "The address prefix for the virtual network"
+      }
+    },
+    "subnetPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.0.0/24",
+      "metadata": {
+        "Description": "The subnet prefix in the virtual network"
+      }
+    },
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_A0",
+      "metadata": {
+        "Description": "The storage size of the VM"
+      }
+    },
+    "scriptURI": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "Description": "The URI of the script that will be run after deploying the VM"
+      }
+    },
+    "commandToExecute": {
+      "type": "string",
+      "metadata": {
+        "Description": "The command to execute after deploying the VM"
+      }
+    },
+    "privateVMCount": {
       "type": "int",
-      "defaultValue": 2
+      "metadata": {
+        "Description": "The number of private VMs"
+      }
     }
   },
   "variables": {
-    "availabilitySetName": "availabilitySet1",
+    "availabilitySetName": "availabilitySet",
     "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'storage')]",
-    "storageAccountType": "Standard_LRS",
-    "imagePublisher": "Canonical",
-    "imageOffer": "UbuntuServer",
-    "imageSku": "14.04.4-LTS",
     "OSDiskName": "osdisk",
     "nicName": "networkinterface",
-    "addressPrefix": "10.0.0.0/16",
     "publicIPAddressName": "publicIP",
     "publicIPAddressType": "Dynamic",
     "subnetName": "Subnet",
-    "subnetPrefix": "10.0.0.0/24",
     "publicVMName": "publicVM",
     "privateVMName": "privateVM",
-    "vmSize": "Standard_A0",
     "vmStorageAccountContainerName": "vhds",
     "virtualNetworkName": "MyVNET",
 
@@ -51,9 +106,10 @@
     {
       "type": "Microsoft.Compute/availabilitySets",
       "name": "[variables('availabilitySetName')]",
-      "apiVersion": "2015-05-01-preview",
+      "apiVersion": "[variables('apiVersion')]",
       "location": "[resourceGroup().location]",
       "properties": {
+        
       }
     },
     {
@@ -62,7 +118,7 @@
       "apiVersion": "[variables('apiVersion')]",
       "location": "[resourceGroup().location]",
       "properties": {
-        "accountType": "[variables('storageAccountType')]"
+        "accountType": "[parameters('storageAccountType')]"
       }
     },
     {
@@ -82,14 +138,14 @@
       "properties": {
         "addressSpace": {
           "addressPrefixes": [
-            "[variables('addressPrefix')]"
+            "[parameters('addressPrefix')]"
           ]
         },
         "subnets": [
           {
             "name": "[variables('subnetName')]",
             "properties": {
-              "addressPrefix": "[variables('subnetPrefix')]"
+              "addressPrefix": "[parameters('subnetPrefix')]"
             }
           }
         ]
@@ -132,7 +188,7 @@
       ],
       "properties": {
         "hardwareProfile": {
-          "vmSize": "[variables('vmSize')]"
+          "vmSize": "[parameters('vmSize')]"
         },
         "osProfile": {
           "computerName": "[variables('publicVMName')]",
@@ -141,9 +197,9 @@
         },
         "storageProfile": {
           "imageReference": {
-            "publisher": "[variables('imagePublisher')]",
-            "offer": "[variables('imageOffer')]",
-            "sku": "[variables('imageSku')]",
+            "publisher": "[parameters('imagePublisher')]",
+            "offer": "[parameters('imageOffer')]",
+            "sku": "[parameters('imageSku')]",
             "version": "latest"
           },
           "osDisk": {
@@ -177,7 +233,7 @@
       ],
       "copy": {
         "name": "nicCopy",
-        "count": "[parameters('hiddenVMCount')]"
+        "count": "[parameters('privateVMCount')]"
       },
       "properties": {
         "ipConfigurations": [
@@ -204,11 +260,11 @@
       ],
       "copy": {
         "name": "privateVMCopy",
-        "count": "[parameters('hiddenVMCount')]"
+        "count": "[parameters('privateVMCount')]"
       },
       "properties": {
         "hardwareProfile": {
-          "vmSize": "[variables('vmSize')]"
+          "vmSize": "[parameters('vmSize')]"
         },
         "osProfile": {
           "computerName": "[concat(variables('privateVMName'), copyIndex())]",
@@ -217,9 +273,9 @@
         },
         "storageProfile": {
           "imageReference": {
-            "publisher": "[variables('imagePublisher')]",
-            "offer": "[variables('imageOffer')]",
-            "sku": "[variables('imageSku')]",
+            "publisher": "[parameters('imagePublisher')]",
+            "offer": "[parameters('imageOffer')]",
+            "sku": "[parameters('imageSku')]",
             "version": "latest"
           },
           "osDisk": {

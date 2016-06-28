@@ -7,6 +7,24 @@
     },
     "adminPassword": {
       "value": "Martin123456"
+    },
+    "imagePublisher": {
+      "value": "Canonical"
+    },
+    "imageOffer": {
+      "value": "UbuntuServer"
+    },
+    "imageSku": {
+      "value": "14.04.4-LTS"
+    },
+    "scriptURI": {
+      "value": "https://raw.githubusercontent.com/fridtjofhl/ARMtemplates/master/martin/webserver.py"
+    },
+    "commandToExecute": {
+      "value": "python webserver.py &"
+    },
+    "privateVMCount": {
+      "value": 2
     }
   }
 }
