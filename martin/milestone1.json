@@ -60,29 +60,19 @@
       "metadata": {
         "Description": "The storage size of the VM"
       }
-    },
-    "privateVMCount": {
-      "type": "int",
-      "defaultValue": 1,
-      "metadata": {
-        "Description": "The number of private VMs"
-      }
     }
   },
   "variables": {
-    "availabilitySetName": "availabilitySet",
     "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'storage')]",
     "OSDiskName": "osdisk",
     "nicName": "networkinterface",
     "publicIPAddressName": "publicIP",
     "publicIPAddressType": "Dynamic",
     "subnetName": "Subnet",
-    "publicVMName": "publicVM",
-    "privateVMName": "privateVM",
+    "VMName": "VM",
     "vmStorageAccountContainerName": "vhds",
     "virtualNetworkName": "virtualNetwork",
 
-    "availabilitySetID": "[resourceId('Microsoft.Compute/availabilitySets', variables('availabilitySetName'))]",
     "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName'))]",
     "publicIPAddressID": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]",
     "storageAccountID": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
@@ -91,15 +81,6 @@
     "apiVersion": "2015-06-15"
   },
   "resources": [
-    {
-      "type": "Microsoft.Compute/availabilitySets",
-      "name": "[variables('availabilitySetName')]",
-      "apiVersion": "[variables('apiVersion')]",
-      "location": "[resourceGroup().location]",
-      "properties": {
-        
-      }
-    },
     {
       "type": "Microsoft.Storage/storageAccounts",
       "name": "[variables('storageAccountName')]",
@@ -151,7 +132,7 @@
       "properties": {
         "ipConfigurations": [
           {
-            "name": "ipconfig1",
+            "name": "ipconfig",
             "properties": {
               "privateIPAllocationMethod": "Dynamic",
               "publicIPAddress": {
@@ -168,7 +149,7 @@
     {
       "apiVersion": "[variables('apiVersion')]",
       "type": "Microsoft.Compute/virtualMachines",
-      "name": "[variables('publicVMName')]",
+      "name": "[variables('VMName')]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
         "[variables('storageAccountID')]",
@@ -179,7 +160,7 @@
           "vmSize": "[parameters('vmSize')]"
         },
         "osProfile": {
-          "computerName": "[variables('publicVMName')]",
+          "computerName": "[variables('VMName')]",
           "adminUsername": "[parameters('adminUsername')]",
           "adminPassword": "[parameters('adminPassword')]"
         },
@@ -205,85 +186,6 @@
               "id": "[variables('nicID')]"
             }
           ]
-        },
-        "availabilitySet": {
-          "id": "[variables('availabilitySetID')]"
-        }
-      }
-    },
-    {
-      "apiVersion": "[variables('apiVersion')]",
-      "type": "Microsoft.Network/networkInterfaces",
-      "name": "[concat(variables('nicName'), copyIndex())]",
-      "location": "[resourceGroup().location]",
-      "dependsOn": [
-        "[variables('vnetID')]"
-      ],
-      "copy": {
-        "name": "nicCopy",
-        "count": "[parameters('privateVMCount')]"
-      },
-      "properties": {
-        "ipConfigurations": [
-          {
-            "name": "ipconfig2",
-            "properties": {
-              "privateIPAllocationMethod": "Dynamic",
-              "subnet": {
-                "id": "[variables('subnetRef')]"
-              }
-            }
-          }
-        ]
-      }
-    },
-    {
-      "apiVersion": "[variables('apiVersion')]",
-      "type": "Microsoft.Compute/virtualMachines",
-      "name": "[concat(variables('privateVMName'), copyIndex())]",
-      "location": "[resourceGroup().location]",
-      "dependsOn": [
-        "[variables('storageAccountID')]",
-        "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('nicName'), copyIndex()))]"
-      ],
-      "copy": {
-        "name": "privateVMCopy",
-        "count": "[parameters('privateVMCount')]"
-      },
-      "properties": {
-        "hardwareProfile": {
-          "vmSize": "[parameters('vmSize')]"
-        },
-        "osProfile": {
-          "computerName": "[concat(variables('privateVMName'), copyIndex())]",
-          "adminUsername": "[parameters('adminUsername')]",
-          "adminPassword": "[parameters('adminPassword')]"
-        },
-        "storageProfile": {
-          "imageReference": {
-            "publisher": "[parameters('imagePublisher')]",
-            "offer": "[parameters('imageOffer')]",
-            "sku": "[parameters('imageSku')]",
-            "version": "latest"
-          },
-          "osDisk": {
-            "name": "[concat(variables('OSDiskName'), copyIndex())]",
-            "vhd": {
-              "uri": "[concat('http://',variables('storageAccountName'),'.blob.core.windows.net/',variables('vmStorageAccountContainerName'),'/',variables('OSDiskName'), copyIndex(), '.vhd')]"
-            },
-            "caching": "ReadWrite",
-            "createOption": "FromImage"
-          }
-        },
-        "networkProfile": {
-          "networkInterfaces": [
-            {
-              "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('nicName'), copyIndex()))]"
-            }
-          ]
-        },
-        "availabilitySet": {
-          "id": "[variables('availabilitySetID')]"
         }
       }
     }
