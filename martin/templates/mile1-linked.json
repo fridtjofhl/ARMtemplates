@@ -1,0 +1,151 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+      
+  },
+  "variables": {
+      "apiVersion": "2015-06-15",
+      "virtualMachineName": "virtualMachine",
+      "networkInterfaceName": "networkInterface",
+      "storageAccountName": "[uniqueString(resourceGroup().id)]",
+      "publicIPAddressName": "publicIPAddress",
+      "virtualNetworkName": "virtualNetwork",
+      "subnetName": "subnet"
+  },
+  "resources": [
+      {
+          "apiVersion": "[variables('apiVersion')]",
+          "type": "Microsoft.Resources/deployments",
+          "name": "[variables('storageAccountName')]",
+          "properties": {
+              "mode": "Incremental",
+              "templateLink": {
+                  "uri": "",
+                  "contentVersion": "1.0.0.0"
+              },
+              "parameters": {
+                  "name": {
+                      "value": "[variables('storageAccountName')]"
+                  },
+                  "accountType": {
+                      "value": "Standard_LRS"
+                  }
+              }
+          }
+      },
+      {
+          "apiVersion": "[variables('apiVersion')]",
+          "type": "Microsoft.Resources/deployments",
+          "name": "[variables('publicIPAddressName')]",
+          "properties": {
+              "mode": "Incremental",
+              "templateLink": {
+                  "uri": "",
+                  "contentVersion": "1.0.0.0"
+              },
+              "parameters": {
+                  "name": {
+                      "value": "[variables('publicIPAddressName')]"
+                  },
+                  "type": {
+                      "value": "Dynamic"
+                  }
+              }
+          }
+      },
+      {
+          "apiVersion": "[variables('apiVersion')]",
+          "type": "Microsoft.Resources/deployments",
+          "name": "[variables('virtualNetworkName')]",
+          "properties": {
+              "mode": "Incremental",
+              "templateLink": {
+                  "uri": "",
+                  "contentVersion": "1.0.0.0"
+              },
+              "parameters": {
+                  "name": {
+                      "value": "[variables('virtualNetworkName')]"
+                  },
+                  "subnetName": {
+                      "value": "[variables('subnetName')]"
+                  },
+                  "addressPrefix": {
+                      "value": "10.0.0.0/16"
+                  },
+                  "subnetPrefix": {
+                      "value": "10.0.0.0/24"
+                  }
+              }
+          }  
+      },
+      {
+          "apiVersion": "[variables('apiVersion')]",
+          "type": "Microsoft.Resources/deployments",
+          "name": "[variables('networkInterfaceName')]",
+          "properties": {
+              "mode": "Incremental",
+              "templateLink": {
+                  "uri": "",
+                  "contentVersion": "1.0.0.0"
+              },
+              "parameters": {
+                  "name": {
+                      "value": "[variables('networkInterfaceName')]"
+                  },
+                  "virtualNetworkName": {
+                      "value": "[variables('virtualNetworkName')]"
+                  },
+                  "subnetName": {
+                      "value": "[variables('subnetName')]"
+                  },
+                  "publicIPAddressName": {
+                      "value": "[variables('publicIPAddressName')]"
+                  }
+              }
+          }
+      },
+      {
+          "apiVersion": "[variables('apiVersion')]",
+          "type": "Microsoft.Resources/deployments",
+          "name": "[variables('virtualMachineName')]",
+          "properties": {
+              "mode": "Incremental",
+              "templateLink": {
+                  "uri": "",
+                  "contentVersion": "1.0.0.0"
+              },
+              "parameters": {
+                  "name": {
+                      "value": "[variables('virtualMachineName')]"
+                  },
+                  "size": {
+                      "value": "Standard_A0"
+                  },
+                  "adminUsername": {
+                      "value": "martin"
+                  },
+                  "adminPassword": {
+                      "value": "Martin123456"
+                  },
+                  "imagePublisher": {
+                      "value": "Canonical"
+                  },
+                  "imageOffer": {
+                      "value": "UbuntuServer"
+                  },
+                  "imageSKU": {
+                      "value": "14.04.4-LTS"
+                  },
+                  "networkInterfaceName": {
+                      "value": "[variables('networkInterfaceName')]"
+                  },
+                  "virtualNetworkName": {
+                      "value": "[variables('virtualNetworkName')]"
+                  }
+              }
+          }
+      }
+  ]
+}
