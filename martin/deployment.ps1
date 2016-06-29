@@ -1,4 +1,4 @@
-﻿$resourceGroup = 'Milestone3-5'
+﻿$resourceGroup = 'Milestone3-7'
 $deployment = 'D1'
 $subscriptionName = 'Free Trial'
 $location = 'North Europe'

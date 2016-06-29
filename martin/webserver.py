@@ -1,6 +1,6 @@
 import socket
 
-HOST, PORT = '', 80
+HOST, PORT = '', 8888
 ip = socket.gethostbyname(socket.gethostname())
 
 listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

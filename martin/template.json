@@ -83,7 +83,7 @@
   },
   "variables": {
     "availabilitySetName": "availabilitySet",
-    "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'storage')]",
+    "storageAccountName": "[concat('storage', uniquestring(resourceGroup().id))]",
     "OSDiskName": "osdisk",
     "nicName": "networkinterface",
     "publicIPAddressName": "publicIP",
@@ -91,7 +91,7 @@
     "subnetName": "Subnet",
     "VMName": "VM",
     "vmStorageAccountContainerName": "vhds",
-    "virtualNetworkName": "MyVNET",
+    "virtualNetworkName": "virtualnetwork",
     "loadBalancerName": "loadBalancer",
 
     "availabilitySetID": "[resourceId('Microsoft.Compute/availabilitySets', variables('availabilitySetName'))]",
